@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:open_gym_project/data/rpe_data.dart';
@@ -13,11 +15,12 @@ class RPECalculator extends StatefulWidget {
 }
 
 class _RPECalculatorState extends State<RPECalculator> {
-  bool calculated = false;
   int reps = 10;
   late TextEditingController _weightController;
   late int rpe;
-  List<RPE>? matchedValues;
+  bool filtered = false;
+  List<RPE> rpeTable = rpeData;
+  double weight = 0.0;
 
   @override
   void initState() {
@@ -28,29 +31,48 @@ class _RPECalculatorState extends State<RPECalculator> {
   void calcRPE() {
     if (_weightController.text.isNotEmpty) {
       setState(() {
-        matchedValues =
-            rpeData.where((element) => element.reps == reps).toList();
+        filtered = true;
+        weight = double.parse(_weightController.text);
+        //makeTable(filteredList);
       });
-      print(matchedValues?.length);
-      for (var element in matchedValues!) {
-        print("${element.percentModifier} ${element.effort}");
-      }
     }
   }
 
-  Table tableCreator() {
-    if(matchedValues != null){
-      print("okay");
-    }
-    print("called");
-    return Table(
-      children: const [
-        TableRow(children: [
-          Text(""),
-        ]),
-      ],
-    );
+  int roundNearest5(double toBeRound){
+    return 5 * (toBeRound / 5).round();
   }
+
+  Widget rpeResults() {
+    if (!filtered) {
+      return const SizedBox();
+    }
+    else {
+      var filteredList = rpeTable.where((element) => element.reps == reps);
+      return SizedBox(
+        width: 100,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Text("RPE"),
+                Text("Weight"),
+            ],),
+            const SizedBox(height: 20,),
+            for (RPE matchedReps in filteredList)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(matchedReps.effort.toStringAsFixed(1)),
+                  Text(roundNearest5(matchedReps.percentModifier * weight).toString())
+                ],
+              )
+          ],
+        ),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -64,19 +86,19 @@ class _RPECalculatorState extends State<RPECalculator> {
             padding: const EdgeInsets.all(30),
             child: Center(
                 child: Row(
-              children: const [
-                Icon(Icons.warning, color: Colors.red),
-                SizedBox(
-                  width: 10,
-                ),
-                Expanded(
-                  child: Text(
-                    "This is a guideline only, RPE is something that should be done entirely off of feel and is an aspect of training you should learn as you progress.",
-                    style: TextStyle(overflow: TextOverflow.visible),
-                  ),
-                ),
-              ],
-            )),
+                  children: const [
+                    Icon(Icons.warning, color: Colors.red),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Expanded(
+                      child: Text(
+                        "This is a guideline only, RPE is something that should be done entirely off of feel and is an aspect of training you should learn as you progress.",
+                        style: TextStyle(overflow: TextOverflow.visible),
+                      ),
+                    ),
+                  ],
+                )),
           ),
           const Divider(),
           SizedBox(
@@ -91,7 +113,7 @@ class _RPECalculatorState extends State<RPECalculator> {
                     controller: _weightController,
                     keyboardType: TextInputType.number,
                     decoration:
-                        const InputDecoration(border: OutlineInputBorder()),
+                    const InputDecoration(border: OutlineInputBorder()),
                   ),
                 )
               ],
@@ -113,17 +135,18 @@ class _RPECalculatorState extends State<RPECalculator> {
                   minValue: 1,
                   maxValue: 12,
                   value: reps,
-                  onChanged: (value) => setState(() {
-                    reps = value;
-                  }),
+                  onChanged: (value) =>
+                      setState(() {
+                        reps = value;
+                      }),
                 )
               ],
             ),
           ),
           ElevatedButton(onPressed: calcRPE, child: const Text("Calculate")),
           Padding(
-            padding: const EdgeInsets.all(30.0),
-            child: tableCreator(),
+            padding: const EdgeInsets.all(10),
+            child: rpeResults(),
           )
         ],
       ),
